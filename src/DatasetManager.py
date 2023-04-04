@@ -128,8 +128,3 @@ class DatasetManager(t.utils.data.Dataset):
         if self.transform:
             image = self.transform(image)
         return image, target
-    
-
-#TEST
-#D = DatasetManager("D:\\Politechnika\\BIAI\\ann_subsample\\ann_subsample", "D:\\Politechnika\\BIAI\\subsample", True, None, 42, 0.8)
-#D.getSample(666)

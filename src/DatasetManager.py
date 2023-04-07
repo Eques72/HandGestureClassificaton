@@ -38,7 +38,6 @@ class DatasetManager(t.utils.data.Dataset):
         self.transform = transform
         self.path_annotation = path_annotation
         self.path_images = path_images
-        self.transform = transform
         self.labels = {label: num for (label, num) in
                        zip(ClassGesturesNames, range(len(ClassGesturesNames)))}
         self.annotations = self.__ReadAnnotations(self.path_annotation)
@@ -48,12 +47,20 @@ class DatasetManager(t.utils.data.Dataset):
         return self.annotations.shape[0]
 
     @staticmethod
-    def __getFileNamesFromDir(pth: str) -> list:
+    def GetFileNamesFromDir(pth: str) -> list:
         if not os.path.exists(pth):
             print(f"Dataset directory doesn't exist {pth}")
             return []
         files = [f for f in os.listdir(pth) if f.endswith(DatasetManager.__dataFileExtension)]
-      #  print(files)
+        return files
+
+    @staticmethod
+    def __GetAbsoluteFilePathsFromDir(pth: str) -> list:
+        if not os.path.exists(pth):
+            print(f"Dataset directory doesn't exist {pth}")
+            return []
+        files = [os.path.join(pth,f) for f in os.listdir(pth) if f.endswith(DatasetManager.__dataFileExtension)]
+        print(files)
         return files
 
     def __ReadAnnotations(self, path:str) -> pd.DataFrame:
@@ -75,7 +82,7 @@ class DatasetManager(t.utils.data.Dataset):
                 annotation["target"] = gesture
                 annotationsAll = pd.concat([annotationsAll, annotation], ignore_index=True)
 
-                existsImages.extend(self.__getFileNamesFromDir(os.path.join(self.path_images, gesture)))
+                existsImages.extend(self.GetFileNamesFromDir(os.path.join(self.path_images, gesture)))
             else:
                 if gesture != 'no_gesture':
                     print(f"Database for {gesture} not found")
@@ -99,7 +106,7 @@ class DatasetManager(t.utils.data.Dataset):
 
         return annotationsAll
 
-    def getSample(self, index: int):
+    def GetSample(self, index: int):
         row = self.annotations.iloc[[index]].to_dict('records')[0] #Gets row (a dictionary) from data frame
 
         imagePath = os.path.join(self.path_images, row["target"], row["name"])
@@ -124,7 +131,7 @@ class DatasetManager(t.utils.data.Dataset):
         return image, target
 
     def __getItem__(self, index: int):
-        image, target = self.getSample(index)
+        image, target = self.GetSample(index)
         if self.transform:
             image = self.transform(image)
         return image, target

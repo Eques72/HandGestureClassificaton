@@ -106,13 +106,13 @@ class DatasetManager(t.utils.data.Dataset):
 
         return annotationsAll
 
-    def GetSample(self, index: int):
+    def GetOneSample(self, index: int):
         row = self.annotations.iloc[[index]].to_dict('records')[0] #Gets row (a dictionary) from data frame
 
         imagePath = os.path.join(self.path_images, row["target"], row["name"])
         image = Image.open(imagePath).convert("RGB")
 
-        image.show()
+       # image.show()
         labels = t.LongTensor([self.labels[label] for label in row["labels"]])
 
         target = {}
@@ -130,8 +130,25 @@ class DatasetManager(t.utils.data.Dataset):
 
         return image, target
 
-    def __getItem__(self, index: int):
-        image, target = self.GetSample(index)
-        if self.transform:
-            image = self.transform(image)
+    def __getitem__(self, index: int):
+        image, target = self.GetOneSample(index)
+       # if self.transform:
+         #   image = self.transform(image)
         return image, target
+
+    
+trainSet = DatasetManager("D:\\Politechnika\\BIAI\\ann_subsample\\ann_subsample", "D:\\Politechnika\\BIAI\\subsample", True,None, 14, 0.8)
+trainSet.GetOneSample(50)
+trainSet.GetOneSample(7)
+trainSet.GetOneSample(115)
+trainSet.GetOneSample(52)
+trainSet.GetOneSample(10)
+trainSet.GetOneSample(400)
+
+#One sample has: {'labels': tensor([0]), 'boxes': tensor([[253.0019, 248.6007, 400.8069, 398.1805]]), 'orig_size': tensor([562, 843])}
+# So tensor for type as int, tensor for bounding box as float (four absolute coordinates (pixels of points (2?))), tensor for original image size
+# And a tensor for image looking like this:
+# device='cuda:0'), tensor([[[1.0000, 1.0000, 1.0000,  ..., 0.3922, 0.3529, 0.3490],
+#          [1.0000, 1.0000, 1.0000,  ..., 0.4118, 0.4039, 0.4039],
+#          [1.0000, 1.0000, 1.0000,  ..., 0.4706, 0.4627, 0.4549],
+#          ...,

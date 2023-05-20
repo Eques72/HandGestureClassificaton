@@ -104,12 +104,15 @@ def main():
 #        for (images, targets) in enumerate(dataLoaderTrain):
         for images, targets in dataLoaderTrain:
             batch = len(images)
+         #   print(type(transform(images[0])),"\n",type(targets[0]),"\n","\n")
             imagesTensor = list(transform(image).to(device) for image in images)
 
             for target in targets:
                 for key, value in target.items():
                     target[key] = value.to(device)
+          #print(type(imagesTensor),"\n",type(imagesTensor[0]),"\n",type(targets),"\n",type(images[0]),"\n",type[images])
             loss_dict = model(imagesTensor, targets)
+           # input()
             losses = sum(loss for loss in loss_dict.values())
      #       loss = losses.item()
 
@@ -246,15 +249,15 @@ def TestModel(transform, model, device, testSet = None):
 #     metrics = mapmetric.compute()
 #     return metrics
 
-#main()
+main()
 
 #Test("model_42_0.8_19_20_2_pre")
 #Test("model_78_0.9_19_20_15_pre")
 
-testSet = dm.DatasetManager(PATH_ANNOTATIONS, PATH_IMAGES, False, tTrans.ToTensor(), 72, split)
-dataLoaderTest = t.utils.data.DataLoader(testSet, batch_size=100
-,collate_fn=Collate, shuffle=True)#, num_workers=4)   #wrapper
-Test("model_78_0.9_19_20_15_pre", dataLoaderTest)
+# testSet = dm.DatasetManager(PATH_ANNOTATIONS, PATH_IMAGES, False, tTrans.ToTensor(), 72, split)
+# dataLoaderTest = t.utils.data.DataLoader(testSet, batch_size=100
+# ,collate_fn=Collate, shuffle=True)#, num_workers=4)   #wrapper
+# Test("model_78_0.9_19_20_15_pre", dataLoaderTest)
 
 
 def PrintCudaStatus():
@@ -268,3 +271,13 @@ def PrintCudaStatus():
     print('Memory Usage:')
     print('Allocated:', round(t.cuda.memory_allocated(0)/1024**3,1), 'GB')
     print('Cached:   ', round(t.cuda.memory_reserved(0)/1024**3,1), 'GB')
+
+
+################# NEW #####################
+
+def showClassifiedImage(image, label, score=0.0):
+    image = np.array(image)
+    image = cv2.putText(image, f'{label}, score: {score}', (1,12), cv2.FONT_HERSHEY_PLAIN,
+                 0.7, (255, 0, 0), 1)
+    Image.fromarray(image).show()    
+    pass 

@@ -60,7 +60,6 @@ class DatasetManager(t.utils.data.Dataset):
             print(f"Dataset directory doesn't exist {pth}")
             return []
         files = [os.path.join(pth,f) for f in os.listdir(pth) if f.endswith(DatasetManager.__dataFileExtension)]
-        print(files)
         return files
 
     def __ReadAnnotations(self, path:str) -> pd.DataFrame:
@@ -113,6 +112,7 @@ class DatasetManager(t.utils.data.Dataset):
         image = Image.open(imagePath).convert("RGB")
 
        # image.show()
+        print([self.labels[label] for label in row["labels"]])
         labels = t.LongTensor([self.labels[label] for label in row["labels"]])
 
         target = {}
@@ -122,6 +122,7 @@ class DatasetManager(t.utils.data.Dataset):
         for bbox in row["bboxes"]:
             x1, y1, w, h = bbox
             bbox_abs = [x1 * width, y1 * height, (x1 + w) * width, (y1 + h) * height]
+            print((x1 + w) * width-x1 * width, y1 * height- (y1 + h) * height)
             bBoxes.append(bbox_abs)
 
         target["labels"] = labels

@@ -1,3 +1,5 @@
+# FAILED ATTEMPT TO CREATE A MODEL
+
 import torch as t
 import torch.nn as nn
 import torchvision.transforms as tTrans

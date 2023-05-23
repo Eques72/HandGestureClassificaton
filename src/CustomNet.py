@@ -2,15 +2,24 @@ import torch
 import torch.nn as nn
 import DatasetManagerMini as dm
 import random
+import os
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+from PIL import Image
+from torch.utils.data import Dataset
+from typing import Tuple, List, Dict
+from torch.utils.data import Dataset
+import pathlib
+
+
 
 #print(torch.__version__)
-
+SEED = 8502
 # Setup device-agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 #print(device)
-
 dir_path = "D:\\Politechnika\\BIAI\\cropped"
-import os
+
 def walk_through_dir(dir_path):
   """
   Walks through dir_path returning its contents.
@@ -28,23 +37,6 @@ def walk_through_dir(dir_path):
 
 #walk_through_dir(dir_path)
 
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-
-data_transform = transforms.Compose([
-    # Resize the images to 64x64
-    transforms.Resize(size=(128, 128)),
-    # Flip the images randomly on the horizontal
-  # transforms.RandomHorizontalFlip(p=0.5), # p = probability of flip, 0.5 = 50% chance
-    # Turn the image into a torch.Tensor
-    transforms.ToTensor() # this also converts all pixel values from 0 to 255 to be between 0.0 and 1.0 
-])
-
-from PIL import Image
-from torch.utils.data import Dataset
-from typing import Tuple, List, Dict
-
-
 def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     # 1. Get the class names by scanning the target directory
     classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
@@ -59,10 +51,7 @@ def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
 
 #print(find_classes(dir_path))
 
-
 # Write a custom dataset class (inherits from torch.utils.data.Dataset)
-from torch.utils.data import Dataset
-import pathlib
 
 # 1. Subclass torch.utils.data.Dataset
 class ImageFolderCustom(Dataset):
@@ -85,6 +74,13 @@ class ImageFolderCustom(Dataset):
         self.transform = transform
         # Create classes and class_to_idx attributes
         self.classes, self.class_to_idx = find_classes(targ_dir)
+
+    def getPaths(self, numberOfPaths = 10, getAllPaths = False):
+        if getAllPaths:
+            return self.paths
+        tmpPaths = self.paths.copy()
+        random.Random().shuffle(tmpPaths)
+        return tmpPaths[:numberOfPaths]
 
     # 4. Make function to load images
     def load_image(self, index: int) -> Image.Image:
@@ -111,24 +107,6 @@ class ImageFolderCustom(Dataset):
             return img, class_idx # return data, label (X, y)
 
 
-# Augment train data
-train_transforms = transforms.Compose([
-    transforms.Resize((128,128)),
- #   transforms.RandomHorizontalFlip(p=0.5),
-    transforms.ToTensor()
-])
-
-# Don't augment test data, only reshape
-test_transforms = transforms.Compose([
-    transforms.Resize((128,128)),
-    transforms.ToTensor()
-])
-
-
-train_data_custom = ImageFolderCustom(targ_dir=dir_path, 
-                                      transform=train_transforms, seed=777, split=0.8, trainSet=True)
-test_data_custom = ImageFolderCustom(targ_dir=dir_path, 
-                                      transform=train_transforms, seed=777, split=0.8, trainSet=False)
 
 # print(len(train_data_custom))
 # print(train_data_custom.classes)
@@ -196,22 +174,9 @@ def display_random_images(dataset: torch.utils.data.dataset.Dataset,
 # print(f"Image shape: {img_custom.shape} -> [batch_size, color_channels, height, width]")
 # print(f"Label shape: {label_custom.shape}")
 
-
-simple_transform = transforms.Compose([ 
-    transforms.Resize((64, 64)),
-    transforms.ToTensor(),
-])
-
 BATCH_SIZE = 32
 print(f"Creating DataLoader's with batch size {BATCH_SIZE}")
 
-# Create DataLoader's
-train_dataloader_simple = DataLoader(train_data_custom, 
-                                     batch_size=BATCH_SIZE, 
-                                     shuffle=True) 
-test_dataloader_simple = DataLoader(test_data_custom, 
-                                     batch_size=BATCH_SIZE, 
-                                     shuffle=True) 
 
 class TinyVGG(nn.Module):
     def __init__(self, input_shape: int, hidden_units: int, output_shape: int) -> None:
@@ -253,7 +218,6 @@ class TinyVGG(nn.Module):
         return mod
         # return self.classifier(self.conv_block_2(self.conv_block_1(x))) # <- leverage the benefits of operator fusion
 
-device = torch.device('cuda') 
 
 # torch.manual_seed(66)
 # model_0 = TinyVGG(input_shape=3, # number of color channels (3 for RGB) 
@@ -395,39 +359,8 @@ def train(model: torch.nn.Module,
     # 6. Return the filled results at the end of the epochs
     return results
 
-SEED = 8502
 
-# Set random seeds
-torch.manual_seed(SEED) 
-torch.cuda.manual_seed(SEED)
 
-# Set number of epochs
-NUM_EPOCHS = 10
-
-# Recreate an instance of TinyVGG
-model_0 = TinyVGG(input_shape=3, # number of color channels (3 for RGB) 
-                  hidden_units=10, 
-                  output_shape=len(train_data_custom.classes)).to(device)
-
-# Setup loss function and optimizer
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(params=model_0.parameters(), lr=0.001)
-
-# Start the timer
-from timeit import default_timer as timer 
-start_time = timer()
-
-# Train model_0 
-model_0_results = train(model=model_0, 
-                        train_dataloader=train_dataloader_simple,
-                        test_dataloader=test_dataloader_simple,
-                        optimizer=optimizer,
-                        loss_fn=loss_fn, 
-                        epochs=NUM_EPOCHS)
-
-# End the timer and print out how long it took
-end_time = timer()
-print(f"Total training time: {end_time-start_time:.3f} seconds")
 
 ################################################################################
 ################################### IO MODEL ###################################
@@ -445,7 +378,7 @@ def SaveModel(model, path:str, filename:str):
 ################################### ANALYSIS ###################################
 ################################################################################
 
-SaveModel(model_0, "D:/Dane/Moje projekty/Python/HandGestureClassification/HandGestureClassificaton/trainedFinals", "model_0_20e_s846_largeKernel")
+
 
 def plot_loss_curves(results: Dict[str, List[float]], epochs: int):
     # Setup a plot 
@@ -469,4 +402,92 @@ def plot_loss_curves(results: Dict[str, List[float]], epochs: int):
     plt.show()
 
 
-plot_loss_curves(model_0_results, range(NUM_EPOCHS))
+
+    # Augment train data
+train_transforms = transforms.Compose([
+    transforms.Resize((128,128)),
+    #   transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ToTensor()
+])
+
+    # Don't augment test data, only reshape
+test_transforms = transforms.Compose([
+    transforms.Resize((128,128)),
+    transforms.ToTensor()
+])
+
+def main():
+    data_transform = transforms.Compose([
+        # Resize the images to 64x64
+        transforms.Resize(size=(128, 128)),
+        # Flip the images randomly on the horizontal
+    # transforms.RandomHorizontalFlip(p=0.5), # p = probability of flip, 0.5 = 50% chance
+        # Turn the image into a torch.Tensor
+        transforms.ToTensor() # this also converts all pixel values from 0 to 255 to be between 0.0 and 1.0 
+    ])
+
+    train_data_custom = ImageFolderCustom(targ_dir=dir_path, 
+                                        transform=train_transforms, seed=SEED, split=0.8, trainSet=True)
+    test_data_custom = ImageFolderCustom(targ_dir=dir_path, 
+                                        transform=train_transforms, seed=SEED, split=0.8, trainSet=False)
+
+
+    simple_transform = transforms.Compose([ 
+        transforms.Resize((64, 64)),
+        transforms.ToTensor(),
+    ])
+
+    # Create DataLoader's
+    train_dataloader_simple = DataLoader(train_data_custom, 
+                                        batch_size=BATCH_SIZE, 
+                                        shuffle=True) 
+    test_dataloader_simple = DataLoader(test_data_custom, 
+                                        batch_size=BATCH_SIZE, 
+                                        shuffle=True) 
+
+
+    device = torch.device('cuda') 
+
+
+    # Set random seeds
+    torch.manual_seed(SEED) 
+    torch.cuda.manual_seed(SEED)
+
+    # Set number of epochs
+    NUM_EPOCHS = 30
+
+    # Recreate an instance of TinyVGG
+    model_0 = TinyVGG(input_shape=3, # number of color channels (3 for RGB) 
+                    hidden_units=10, 
+                    output_shape=len(train_data_custom.classes)).to(device)
+
+    # Setup loss function and optimizer
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(params=model_0.parameters(), lr=0.0001)
+#    optimizer = torch.optim.Adam(params=model_0.parameters(), lr=0.0001)
+
+    # Start the timer
+    from timeit import default_timer as timer 
+    start_time = timer()
+
+    # Train model_0 
+    model_0_results = train(model=model_0, 
+                            train_dataloader=train_dataloader_simple,
+                            test_dataloader=test_dataloader_simple,
+                            optimizer=optimizer,
+                            loss_fn=loss_fn, 
+                            epochs=NUM_EPOCHS)
+
+    # End the timer and print out how long it took
+    end_time = timer()
+    print(f"Total training time: {end_time-start_time:.3f} seconds")
+
+    specsModelInfo = "largeKernel_lowLR_SGD"
+    SaveModel(
+        model_0, 
+        "D:/Dane/Moje projekty/Python/HandGestureClassification/HandGestureClassificaton/trainedFinals", 
+        "model_seed{a}_epoch{b}_batch{c}_spec-{d}".format(a=SEED,b=NUM_EPOCHS,c=BATCH_SIZE,d=specsModelInfo)+"_cus")
+
+    plot_loss_curves(model_0_results, range(NUM_EPOCHS))
+
+#main()

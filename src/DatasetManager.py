@@ -1,3 +1,5 @@
+#ONLY FOR PRE TRAINED MODEL
+
 import torch as t
 import os
 import pandas as pd

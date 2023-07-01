@@ -3,7 +3,8 @@ import torchvision
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
-def testModelVisually(testDataset, model, numOfImgs: int = 5):
+
+def testModelVisually(testDataset, model, imageSize, contrFun = None, contrast:float=0, numOfImgs: int = 5, ):
 
     testImgPaths = testDataset.getPaths(numOfImgs)
     imagePredictions = []#list of tuples, guessed label and probability
@@ -14,7 +15,8 @@ def testModelVisually(testDataset, model, numOfImgs: int = 5):
         image4Model = image4Model / 255.0
 
         image4ModelTransformPipeline = transforms.Compose([
-            transforms.Resize((128,128)),
+            transforms.Resize((imageSize,imageSize)),
+            # contrFun(contrast=contrast),
         ])
         image4ModelTransformed = image4ModelTransformPipeline(image4Model)
 

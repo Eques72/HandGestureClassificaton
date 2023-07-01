@@ -120,7 +120,7 @@ class CustomTinyVGG(nn.Module):
                        kernel_size=6,
                        stride=1,
                        padding=1),
-            nn.Dropout(0.8),
+            nn.Dropout(0.9),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2,
                          stride=2) 
@@ -129,7 +129,7 @@ class CustomTinyVGG(nn.Module):
             nn.Conv2d(hidden_units, hidden_units, kernel_size=6, padding=1),
             nn.ReLU(),
             nn.Conv2d(hidden_units, hidden_units, kernel_size=6, padding=1),
-            nn.Dropout(0.8),
+            nn.Dropout(0.9),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
@@ -161,7 +161,6 @@ def trainStep(model: torch.nn.Module,
     
     for batch, (X, Y) in enumerate(dataloader):
         X, Y = X.to(device), Y.to(device)
-
         prediction = model(X)
 
         loss = lossFun(prediction, Y)
@@ -386,12 +385,6 @@ class ResNet(nn.Module):
     ) -> nn.Sequential:
         downsample = None
         if stride != 1:
-            """
-            This should pass from `layer2` to `layer4` or 
-            when building ResNets50 and above. Section 3.3 of the paper
-            Deep Residual Learning for Image Recognition
-            (https://arxiv.org/pdf/1512.03385v1.pdf).
-            """
             downsample = nn.Sequential(
                 nn.Conv2d(
                     self.in_channels, 
@@ -427,7 +420,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         # The spatial dimension of the final layer's feature 
         # map should be (7, 7) for all ResNets.
-        print('Dimensions of the last convolutional feature map: ', x.shape)
+        # print('Dimensions of the last convolutional feature map: ', x.shape)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)

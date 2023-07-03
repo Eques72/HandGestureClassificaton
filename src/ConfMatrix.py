@@ -11,25 +11,24 @@ class ConfusionMatrixGenerator:
     
     @staticmethod
     def generateConfMatrix(net, testSet, filename:str):
-        y_pred = []
-        y_true = []
+        yPred = []
+        yTrue = []
         net.eval()
         for batch, (inputs, labels) in enumerate(testSet):
                 inputs, labels = inputs.cuda(), labels.cuda()
-                output = net(inputs) # Feed Network
+                output = net(inputs)
 
                 output = (torch.max(torch.exp(output), 1)[1]).data.cpu().numpy()
-                y_pred.extend(output) # Save Prediction
+                yPred.extend(output)
                 
                 labels = labels.data.cpu().numpy()
-                y_true.extend(labels) # Save Truth
+                yTrue.extend(labels)
 
         classes = ('call', 'dislike', 'fist', 'four', 'like', 'mute', 'ok', 'one', 'palm', 'peace', 'peace_inverted', 'rock', 'stop', 'stop_inverted', 'three', 'three2', 'two_up', 'two_up_inverted')
 
-        # Build confusion matrix
-        cf_matrix = confusion_matrix(y_true, y_pred)
-        df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix, axis=1)[:, None], index = [i for i in classes],
+        matrix = confusion_matrix(yTrue, yPred)
+        dfMatrix = pd.DataFrame(matrix / np.sum(matrix, axis=1)[:, None], index = [i for i in classes],
                             columns = [i for i in classes])
         plt.figure(figsize = (12,7))
-        sn.heatmap(df_cm, annot=True)
+        sn.heatmap(dfMatrix, annot=True)
         plt.savefig(filename+'_output.png')

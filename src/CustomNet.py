@@ -84,30 +84,6 @@ class CustomTinyVGG(nn.Module):
     def __init__(self, input_shape: int, hidden_units: int, output_shape: int) -> None:
         super().__init__()
 
-        # self.block = nn.Sequential(
-        #     nn.Conv2d(in_channels=input_shape, 
-        #               out_channels=hidden_units, 
-        #               kernel_size=3, 
-        #               stride=1, 
-        #               padding=1),
-        # nn.BatchNorm2d(hidden_units),
-        # nn.ReLU(),
-        # nn.MaxPool2d(kernel_size=2, stride=2),
-        # nn.Conv2d(hidden_units, hidden_units, kernel_size=3, stride=1, padding=1),
-        # nn.BatchNorm2d(hidden_units),
-        # nn.ReLU(),
-        # nn.MaxPool2d(kernel_size=2, stride=2),
-        # nn.Conv2d(hidden_units, hidden_units, kernel_size=3, stride=1, padding=1),
-        # nn.BatchNorm2d(hidden_units),
-        # nn.ReLU(),
-        # nn.MaxPool2d(kernel_size=2, stride=2),
-        # nn.Flatten(),
-        # nn.Linear(2560, hidden_units*2),
-        # nn.ReLU(),
-        # nn.Dropout(0.5),
-        # nn.Linear(20, output_shape)
-        # )
-
         self.convBlock_1 = nn.Sequential(
             nn.Conv2d(in_channels=input_shape, 
                       out_channels=hidden_units, 
@@ -139,7 +115,6 @@ class CustomTinyVGG(nn.Module):
         )
     
     def forward(self, mod: torch.Tensor):
-        # mod = self.block(mod)
         mod = self.convBlock_1(mod)
         mod = self.convBlock_2(mod)
         mod = self.classifier(mod)
@@ -179,7 +154,7 @@ def trainStep(model: torch.nn.Module,
 
 def testStep(model: torch.nn.Module, 
               dataloader: torch.utils.data.DataLoader, 
-              loss_fn: torch.nn.Module,
+              lossFun: torch.nn.Module,
               device: torch.device):
 
     model.eval() 
@@ -191,7 +166,7 @@ def testStep(model: torch.nn.Module,
     
             prediction = model(X)
 
-            loss = loss_fn(prediction, Y)
+            loss = lossFun(prediction, Y)
             testLoss += loss.item()
             
             predictionLabels = prediction.argmax(dim=1)
@@ -225,7 +200,7 @@ def trainAndStat(model: torch.nn.Module,
         testLoss, testAcc = testStep(
             model=model,
             dataloader=testDataloader,
-            loss_fn=lossFun,
+            lossFun=lossFun,
             device=device)
         
         print(f"Epoch: {epoch+1} | "f"train_loss: {trainLoss:.4f} | "f"train_acc: {trainAcc:.4f} | "f"test_loss: {testLoss:.4f} | "f"test_acc: {testAcc:.4f}")
@@ -267,32 +242,9 @@ def plotLoss(results: Dict[str, List[float]], epochs: int):
     plt.plot(epochs, results['test_acc'], label='test_accuracy')
     plt.title('Accuracy')
     plt.xlabel('Epochs')
-    plt.legend();
+    plt.legend()
     plt.show()
     pass
-
-
-
-
-# datasetDirPath = "D:\\Politechnika\\BIAI\\cropped"
-# import testCustomNet as tcn
-
-# testTransforms = transforms.Compose([
-#     transforms.Resize((128,128)),
-#     transforms.ToTensor()
-# ])
-# SEED = 8502
-# BATCH_SIZE = 32
-# NUM_EPOCHS = 30
-# SPLIT = 0.8
-
-# testData = DatasetFromFolderCustom(targetDir=datasetDirPath, 
-#                                         transform=testTransforms, seed=SEED, split=SPLIT, trainSet=False)
-# model = LoadModel( 
-#     "D:/Dane/Moje projekty/Python/HandGestureClassification/HandGestureClassificaton/trainedFinals", 
-#     "model_seed8502_epoch10_batch32_spec-largeKernel_lowLR_cus")
-# tcn.testModelVisually(testData, model, 5)
-
 
 class BasicBlock(nn.Module):
     def __init__(
@@ -304,8 +256,6 @@ class BasicBlock(nn.Module):
         downsample: nn.Module = None
     ) -> None:
         super(BasicBlock, self).__init__()
-        # Multiplicative factor for the subsequent conv2d layer's output channels.
-        # It is 1 for ResNet18 and ResNet34.
         self.expansion = expansion
         self.downsample = downsample
         self.conv1 = nn.Conv2d(
@@ -350,15 +300,10 @@ class ResNet(nn.Module):
     ) -> None:
         super(ResNet, self).__init__()
         if num_layers == 18:
-            # The following `layers` list defines the number of `BasicBlock` 
-            # to use to build the network and how many basic blocks to stack
-            # together.
             layers = [2, 2, 2, 2]
             self.expansion = 1
         
         self.in_channels = 64
-        # All ResNets (18 to 152) contain a Conv2d => BN => ReLU for the first
-        # three layers. Here, kernel size is 7.
         self.conv1 = nn.Conv2d(
             in_channels=img_channels,
             out_channels=self.in_channels,
@@ -370,13 +315,13 @@ class ResNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(self.in_channels)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.layer1 = self.makeLayer(block, 64, layers[0])
+        self.layer2 = self.makeLayer(block, 128, layers[1], stride=2)
+        self.layer3 = self.makeLayer(block, 256, layers[2], stride=2)
+        self.layer4 = self.makeLayer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512*self.expansion, num_classes)
-    def _make_layer(
+    def makeLayer(
         self, 
         block: Type[BasicBlock],
         out_channels: int,
@@ -409,6 +354,7 @@ class ResNet(nn.Module):
                 expansion=self.expansion
             ))
         return nn.Sequential(*layers)
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv1(x)
         x = self.bn1(x)
@@ -418,9 +364,6 @@ class ResNet(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        # The spatial dimension of the final layer's feature 
-        # map should be (7, 7) for all ResNets.
-        # print('Dimensions of the last convolutional feature map: ', x.shape)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)

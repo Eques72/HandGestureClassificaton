@@ -4,10 +4,22 @@ from CustomNet import BasicBlock
 from CustomNet import ResNet
 import testCustomNet as tcn
 from ConfMatrix import ConfusionMatrixGenerator
+from timeit import default_timer as timer 
+import torchvision.transforms.functional as TF
+import argparse
 
-training = False;
+parser = argparse.ArgumentParser(prog="CNN",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("-tr", "--istrain", help="Set true if train", required=False)
+parser.add_argument("-bch", "--batch", help="Provide an size of batch",required=False)
+parser.add_argument("-ep", "--epoch", help="Provide an number of epochs", required=False)
+parser.add_argument("-inf", "--info", help="Provide an info to saved model name",required=False)
+parser.add_argument("-ld", "--load", help="Provide an name of the model",required=False)
 
-
+args = parser.parse_args()
+training = False
+if args.istrain is not None:
+    training = bool(args.istrain)
 
 
 def displayBasicInfo():
@@ -40,19 +52,6 @@ def main():
     cn.torch.cuda.manual_seed(SEED)
 
 
-# if __name__ == '__main__':
-#     tensor = torch.rand([1, 3, 224, 224])
-#     model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=1000)
-#     print(model)
-    
-#     # Total parameters and trainable parameters.
-#     total_params = sum(p.numel() for p in model.parameters())
-#     print(f"{total_params:,} total parameters.")
-#     total_trainable_params = sum(
-#         p.numel() for p in model.parameters() if p.requires_grad)
-#     print(f"{total_trainable_params:,} training parameters.")
-#     output = model(tensor)
-
     model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=18).to(device)
 
     # model = cn.CustomTinyVGG(input_shape=3, #rgb
@@ -60,10 +59,9 @@ def main():
     #                 output_shape=len(trainData.classes)).to(device)
 
     lossFun = cn.nn.CrossEntropyLoss()
-#    optimizer = cn.torch.optim.SGD(params=model.parameters(), lr=0.001)
     optimizer = cn.torch.optim.Adam(params=model.parameters(), lr=0.00008)
 
-    from timeit import default_timer as timer 
+
     startTime = timer()
 
     modelResults = cn.trainAndStat(model=model, 
@@ -77,6 +75,8 @@ def main():
     endTime = timer()
     print(f"Total training time: {endTime-startTime:.3f} seconds")
     specsModelInfo = "rasnet_best_ContrastPostProc"
+    if args.info is not None:
+        specsModelInfo = str(args.info)
     cn.SaveModel(
         model, 
         "D:/Dane/Moje projekty/Python/HandGestureClassification/HandGestureClassificaton/trainedFinals", 
@@ -91,14 +91,17 @@ def main():
 
 SEED = 9512
 BATCH_SIZE = 64
+if args.batch is not None:
+    BATCH_SIZE = int(args.batch)
 NUM_EPOCHS = 25
+if args.epoch is not None:
+    NUM_EPOCHS = int(args.epoch)
 SPLIT = 0.9
 IMAGE_SIZE = 224 #256 #128
 device = "cuda" if cn.torch.cuda.is_available() else "cpu"
 datasetDirPath = "D:\\Politechnika\\BIAI\\cropped"
 #Train pipeline
 
-import torchvision.transforms.functional as TF
 class OwnColorTransform:
 
     def __init__(self, contrast):
@@ -110,8 +113,8 @@ class OwnColorTransform:
 trainTransforms = cn.transforms.Compose([
     cn.transforms.Resize((IMAGE_SIZE,IMAGE_SIZE)),
     # cn.transforms.ColorJitter( contrast=0.9),
-#    cn.transforms.Grayscale(num_output_channels=1),
-    #  OwnColorTransform(contrast=0.5),
+    # cn.transforms.Grayscale(num_output_channels=1),
+    # OwnColorTransform(contrast=0.5),
     cn.transforms.ToTensor()
 ])
 #Test pipeline
@@ -119,8 +122,7 @@ testTransforms = cn.transforms.Compose([
     cn.transforms.Resize((IMAGE_SIZE,IMAGE_SIZE)),
     # cn.transforms.ColorJitter(contrast=0.9),
     #  OwnColorTransform(contrast=0.5),
-    
- #   cn.transforms.Grayscale(num_output_channels=1),
+    # cn.transforms.Grayscale(num_output_channels=1),
     cn.transforms.ToTensor()
 ])
 
@@ -131,9 +133,13 @@ if training :
 else:
     testData = cn.DatasetFromFolderCustom(targetDir=datasetDirPath, 
                                         transform=testTransforms, seed=SEED, split=SPLIT, trainSet=False)
+    
+    modelName = "model_seed9512_epoch25_batch64_spec-rasnet_best_noPostProc_cus"
+    if args.load is not None:
+        modelName = str(args.load)
     model = cn.LoadModel( 
         "D:/Dane/Moje projekty/Python/HandGestureClassification/HandGestureClassificaton/trainedFinals", 
-        "model_seed9512_epoch25_batch64_spec-rasnet_best_noPostProc_cus")
+        modelName)
     tcn.testModelVisually(testData, model, IMAGE_SIZE,OwnColorTransform,0.5, 5)
     testDataloader = cn.DataLoader(testData, 
                                         batch_size=BATCH_SIZE, 

@@ -3,7 +3,8 @@ import torchvision
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
-def testModelVisually(testDataset, model, numOfImgs: int = 5):
+
+def testModelVisually(testDataset, model, imageSize, contrFun = None, contrast:float=0, numOfImgs: int = 5, ):
 
     testImgPaths = testDataset.getPaths(numOfImgs)
     imagePredictions = []#list of tuples, guessed label and probability
@@ -13,9 +14,17 @@ def testModelVisually(testDataset, model, numOfImgs: int = 5):
         image4Model = torchvision.io.read_image(str(testImgPaths[i]))
         image4Model = image4Model / 255.0
 
+
         image4ModelTransformPipeline = transforms.Compose([
-            transforms.Resize((128,128)),
+            transforms.Resize((imageSize,imageSize)),
         ])
+        if contrFun is not None:
+            image4ModelTransformPipeline = transforms.Compose([
+                transforms.Resize((imageSize,imageSize)),
+                contrFun(contrast=contrast),
+            ])
+
+
         image4ModelTransformed = image4ModelTransformPipeline(image4Model)
 
         model.eval()
@@ -23,9 +32,9 @@ def testModelVisually(testDataset, model, numOfImgs: int = 5):
             
             imagePrediction = model(image4ModelTransformed.unsqueeze(dim=0).to(torch.device('cuda')))
             imagePrediction_probabilities = torch.softmax(imagePrediction, dim=1)
-            imagePrediction_class_pred_val = torch.argmax(imagePrediction_probabilities, dim=1)
-            imagePrediction_class_pred = testDataset.classes[imagePrediction_class_pred_val.cpu()] # put pred label to CPU, otherwise will error
-            imagePredictions.append((imagePrediction_class_pred, imagePrediction_probabilities.max().cpu()))
+            imagePredictionClassPredVal = torch.argmax(imagePrediction_probabilities, dim=1)
+            imagePredictionClassPred = testDataset.classes[imagePredictionClassPredVal.cpu()] # put pred label to CPU, otherwise will error
+            imagePredictions.append((imagePredictionClassPred, imagePrediction_probabilities.max().cpu()))
 
     plt.figure(figsize=(32, 8))
 
